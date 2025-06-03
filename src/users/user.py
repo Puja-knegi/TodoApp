@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String
+from sqlalchemy import Column, DateTime, String
 from datetime import datetime
 from ..db.session import Base
 
@@ -8,5 +8,5 @@ class User(Base):
     email = Column(String, primary_key=True, index=True)
     username = Column(String, unique=True, index=True)
     hashed_password = Column(String)
-    created_at: datetime = datetime.now()
-    updated_at: datetime = datetime.now()
+    created_at = Column(DateTime, default=datetime.now) 
+    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
