@@ -1,5 +1,4 @@
 from pydantic import BaseModel, EmailStr
-from datetime import datetime
 
 class UserRequest(BaseModel):
     email: EmailStr
@@ -10,10 +9,13 @@ class UserLoginRequest(BaseModel):
     email: EmailStr
     password: str
 
-class UserResponse(BaseModel):
-    email: EmailStr
-    username: str
-    created_at: datetime = datetime.now()
+class TokenBase(BaseModel):
+    token_type: str
+    access_token: str
 
-    class Config:
-        from_attributes = True
+class TokenResponse(TokenBase):
+    refresh_token: str
+
+class RefreshTokenRequest(BaseModel):
+    refresh_token: str
+    
