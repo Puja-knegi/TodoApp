@@ -1,5 +1,6 @@
 import os
-from jose import JWTError, jwt
+from jose import jwt
+from fastapi import HTTPException, status
 from datetime import datetime, timedelta
 from passlib.context import CryptContext
 from dotenv import load_dotenv
@@ -44,5 +45,13 @@ def verify_token(token: str, is_refresh: bool = False):
         secret = JWT_REFRESH_SECRET_KEY if is_refresh else JWT_SECRET_KEY
         payload = jwt.decode(token, secret, algorithms=[ALGORITHM])
         return payload
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token expired",
+        )
     except jwt.JWTError:
-        return None
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token",
+        )
