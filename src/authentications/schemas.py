@@ -1,9 +1,19 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, field_validator
+import re
 
 class UserRequest(BaseModel):
     email: EmailStr
     username: str
     password: str
+
+    @field_validator('password')
+    def validate_password(cls, v):
+        if not re.fullmatch(r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,64}$', v):
+            raise ValueError(
+                "Password must contain at least 8 digits one uppercase letter, "
+                "one lowercase letter, one number and one special character"
+            )
+        return v
 
 class UserLoginRequest(BaseModel):
     email: EmailStr
