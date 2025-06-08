@@ -1,9 +1,12 @@
 from fastapi import Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from .schemas import UserRequest, UserLoginRequest, TokenResponse, RefreshTokenRequest
+from .schemas import UserRequest, UserLoginRequest, TokenResponse, RefreshTokenRequest, ForgotPasswordRequest, ResetPasswordRequest
 from src.users.user import User
 from .hashing import hash_password, verify_password, create_access_token, create_refresh_token, verify_token
 from ..db.session import get_db
+from .email_service import email_service
+from .otp_service import generate_otp, verify_otp
+
 
 def create_user(user_data: UserRequest, db: Session= Depends(get_db)) -> User:    
     existing_email = db.query(User).filter(User.email == user_data.email).first()
@@ -66,3 +69,47 @@ def refresh_access_token(token_data: RefreshTokenRequest):
         refresh_token=new_refresh_token,
         token_type="bearer"
     )
+
+def forgot_password(request: ForgotPasswordRequest, db: Session):
+    user = db.query(User).filter(User.email == request.email).first()
+    if not user:
+        return {"message": "If the email exists, a password reset OTP has been sent"}
+
+    otp_code = generate_otp(request.email)
+
+    subject = "Password Reset OTP"
+    body = f"""
+    <html>
+        <body>
+            <p>Hello,</p>
+            <p>Your password reset OTP is:</p>
+            <p><strong>{otp_code}</strong></p>
+            <p>This OTP is valid for 2 minutes.</p>
+            <p>If you didn't request this, please ignore this email.</p>
+        </body>
+    </html>
+    """
+    email_service.send_email(request.email, subject, body)
+    
+    return {"message": "If the email exists, a password reset OTP has been sent"}
+
+def reset_password(request: ResetPasswordRequest, db: Session):
+    is_valid = verify_otp(request.email, request.otp)
+    if not is_valid:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired OTP"
+        )
+ 
+    user = db.query(User).filter(User.email == request.email).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+    hashed_password = hash_password(request.new_password)
+
+    user.hashed_password = hashed_password
+    db.commit()
+    
+    return {"message": "Password reset successfully"}
